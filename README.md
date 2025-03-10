@@ -4,7 +4,7 @@
 
 
 ### `notebooks` folder
-- `EDA.ipynb` - contains dataset's preparation and EDA
+- `SVD++.ipynb` - everything for SVD++
 
 
 # Branch rules
