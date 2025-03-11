@@ -1,4 +1,12 @@
+# Core
 matplotlib
 seaborn
 numpy
 pandas
+
+# Fast API
+create-fastapi-project
+python-dotenv
+fastapi
+uvicorn
+pydantic
