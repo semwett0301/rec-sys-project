@@ -1,8 +1,13 @@
 # Core
 matplotlib
 seaborn
-numpy
+numpy==1.26.4
 pandas
+scipy
+
+# FS
+pyarrow
+kagglehub
 
 # Fast API
 create-fastapi-project
