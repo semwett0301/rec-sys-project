@@ -85,47 +85,47 @@ class SVDpp:
         """
 
         # If both user and item are unknown, return the global mean rating
-        if user_id not in self._user_mapping and item_id not in self._item_mapping:
+        if user_id not in self._user_id_to_idx and item_id not in self._item_id_to_idx:
             return self._global_mean
 
         # If the item is unknown, return the user's average rating
-        if item_id not in self._item_mapping:
-            user_idx = self._user_mapping[user_id]
+        if item_id not in self._item_id_to_idx:
+            user_idx = self._user_id_to_idx[user_id]
             user_ratings = self._ratings[user_idx].data
             return np.mean(user_ratings) if len(user_ratings) > 0 else self._global_mean
 
         # If the user is unknown, return the item's average rating
-        if user_id not in self._user_mapping:
-            item_idx = self._item_mapping[item_id]
+        if user_id not in self._user_id_to_idx:
+            item_idx = self._item_id_to_idx[item_id]
             item_ratings = self._ratings[:, item_idx].data
             return np.mean(item_ratings) if len(item_ratings) > 0 else self._global_mean
 
         # Otherwise, use the trained model to predict the rating
-        user_idx = self._user_mapping[user_id]
-        item_idx = self._item_mapping[item_id]
+        user_idx = self._user_id_to_idx[user_id]
+        item_idx = self._item_id_to_idx[item_id]
         predicted_rating, _, _ = self._predict_with_calculated_params(user_idx, item_idx)
         return predicted_rating
 
     def fit(self, ratings: csr_matrix, implicit_rating: Dict[str, Dict[str, float]],
-            user_mapping: Dict[str, int], item_mapping: Dict[str, int]):
+            user_id_to_idx: Dict[str, int], item_id_to_idx: Dict[str, int]):
         """
         Trains the SVD++ model using a CSR matrix for ratings.
 
         :param ratings: csr_matrix where rows = users, columns = items, data = explicit ratings
         :param implicit_rating: Dictionary of implicit feedback interactions
                                  (keys - user id, values - ratings given by users to item ids).
-        :param user_mapping: Mapping from original user IDs to matrix indices.
-        :param item_mapping: Mapping from original item IDs to matrix indices.
+        :param user_id_to_idx: Mapping from original user IDs to matrix indices.
+        :param item_id_to_idx: Mapping from original item IDs to matrix indices.
         """
         # Store mappings
-        self._user_mapping = user_mapping
-        self._item_mapping = item_mapping
+        self._user_id_to_idx = user_id_to_idx
+        self._item_id_to_idx = item_id_to_idx
 
-        self._reverse_user_mapping = {v: k for k, v in user_mapping.items()}
-        self._reverse_item_mapping = {v: k for k, v in item_mapping.items()}
+        self._reverse_user_mapping = {v: k for k, v in user_id_to_idx.items()}
+        self._reverse_item_mapping = {v: k for k, v in item_id_to_idx.items()}
 
         # Validate parameters
-        _check_params(implicit_rating, user_mapping, item_mapping)
+        _check_params(implicit_rating, user_id_to_idx, item_id_to_idx)
 
         # Initialize parameters
         self._params_initialization(ratings, implicit_rating)
@@ -178,9 +178,9 @@ class SVDpp:
         # Convert implicit feedback using internal indices (from user and item ids to indices)
         self._implicit_rating = {}
         for user_id, items in implicit_rating.items():
-            user_idx = self._user_mapping[user_id]
+            user_idx = self._user_id_to_idx[user_id]
             self._implicit_rating[user_idx] = {
-                self._item_mapping[item_id]: weight
+                self._item_id_to_idx[item_id]: weight
                 for item_id, weight in items.items()
             }
 

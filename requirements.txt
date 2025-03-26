@@ -4,6 +4,7 @@ seaborn
 numpy==1.26.4
 pandas
 scipy
+scikit-learn
 
 # FS
 pyarrow
