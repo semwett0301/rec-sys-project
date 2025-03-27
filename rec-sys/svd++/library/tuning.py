@@ -1,5 +1,4 @@
-from typing import Callable, Tuple, Any
-from venv import logger
+import logging
 
 from scipy.sparse import csr_matrix
 from sklearn.model_selection import ParameterGrid
@@ -7,14 +6,20 @@ from sklearn.model_selection import ParameterGrid
 from metrics import SvdMetricsCalculator
 from svdpp import SVDpp
 
+# Default hyperparameter grid for grid search
 _DEFAULT_PARAM_GRID = {
-    'n_factors': [10, 20, 30],
-    'n_epochs': [10, 20],
-    'lr_all': [0.005, 0.007],
-    'reg_all': [0.1]
+    'n_factors': [10],  # Number of latent factors
+    'n_epochs': [10],  # Number of training iterations
+    'lr_all': [0.005],  # Learning rate
+    'reg_all': [0.1]  # Regularization strength
 }
 
+
 class GridSearchSvdPP:
+    """
+    Class to perform grid search for hyperparameter tuning of the SVD++ model.
+    """
+
     def __init__(self,
                  train_matrix: csr_matrix,
                  train_implicit_rating: dict,
@@ -22,6 +27,16 @@ class GridSearchSvdPP:
                  user_mapping: dict[str, dict],
                  item_mapping: dict[str, dict],
                  param_grid: dict[str, list] = _DEFAULT_PARAM_GRID):
+        """
+        Initializes the grid search object with data and parameters.
+
+        :param train_matrix: CSR-format sparse matrix of explicit ratings for training.
+        :param train_implicit_rating: Dictionary of implicit feedback (e.g., views, clicks).
+        :param val_matrix: CSR-format sparse matrix of validation ratings.
+        :param user_mapping: Dicts for user ID to index and index to user ID mappings.
+        :param item_mapping: Dicts for item ID to index and index to item ID mappings.
+        :param param_grid: Dictionary of hyperparameters to search over.
+        """
         self._param_grid = ParameterGrid(param_grid)
 
         self._train_matrix = train_matrix
@@ -32,6 +47,12 @@ class GridSearchSvdPP:
         self._item_mapping = item_mapping
 
     def _create_model(self, params):
+        """
+        Instantiates and fits the SVD++ model with the given parameters.
+
+        :param params: Dictionary of hyperparameters.
+        :return: Trained SVDpp model.
+        """
         model = SVDpp(**params)
         model.fit(ratings=self._train_matrix, implicit_rating=self._train_implicit_rating,
                   user_id_to_idx=self._user_mapping['id_to_idx'], item_id_to_idx=self._item_mapping['id_to_idx'])
@@ -39,23 +60,41 @@ class GridSearchSvdPP:
         return model
 
     def _create_metrics_calculator(self, model: SVDpp):
-        return SvdMetricsCalculator(model=model, idx_to_item_id=self._item_mapping['idx_to_id'],
-                                    idx_to_user_id=self._user_mapping['idx_to_id'], test_matrix=self._val_matrix)
+        """
+        Creates an evaluation object for computing metrics on the validation set.
 
-    def run(self, explicit_rating_max: int) -> tuple[tuple[int] | None, float, SVDpp | None]:
-        best_score = float("inf")
+        :param model: Trained SVD++ model.
+        :return: SvdMetricsCalculator instance.
+        """
+        return SvdMetricsCalculator(
+            model=model,
+            idx_to_item_id=self._item_mapping['idx_to_id'],
+            idx_to_user_id=self._user_mapping['idx_to_id'],
+            test_matrix=self._val_matrix
+        )
+
+    def run(self) -> tuple[tuple[int] | None, float, SVDpp | None]:
+        """
+        Runs grid search over all parameter combinations, evaluates each model,
+        and returns the best configuration based on RMSE.
+
+        :return: Tuple of (best parameters, best RMSE score, best model).
+        """
+        best_score = float("inf") # Initialize with the worst possible RMSE
         best_params = None
         best_model = None
 
         for idx, params in enumerate(self._param_grid):
-            logger.info(f"Try number: {idx + 1}")
-            logger.info(f"Train with params: {params}")
+            logging.info(f"Try number: {idx + 1}")
+            logging.info(f"Train with params: {params}")
 
+            # Train model with current hyperparameters
             model = self._create_model(params)
 
+            # Compute validation RMSE
             metric_calculator = self._create_metrics_calculator(model)
-            common_metric = metric_calculator.calculate_common_metric(explicit_rating_max)
-            logger.info(f"Current common score: {common_metric}")
+            common_metric = metric_calculator.calculate_rmse()
+            logging.info(f"Current common score: {common_metric}")
 
             if common_metric < best_score:
                 best_score = common_metric
