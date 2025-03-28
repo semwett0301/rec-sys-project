@@ -1,5 +1,5 @@
+import logging
 from typing import Dict, Tuple
-from venv import logger
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -132,7 +132,7 @@ class SVDpp:
 
         # Iterate over non-zero entries in the sparse matrix
         for epoch in range(self._n_epochs):
-            logger.info(f"Epoch: {epoch + 1}")
+            logging.info(f"Epoch: {epoch + 1}")
 
             # Get indices of non-zero elements
             rows, cols = ratings.nonzero()

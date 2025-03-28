@@ -6,15 +6,6 @@ from sklearn.model_selection import ParameterGrid
 from metrics import SvdMetricsCalculator
 from svdpp import SVDpp
 
-# Default hyperparameter grid for grid search
-_DEFAULT_PARAM_GRID = {
-    'n_factors': [10],  # Number of latent factors
-    'n_epochs': [10],  # Number of training iterations
-    'lr_all': [0.005],  # Learning rate
-    'reg_all': [0.1]  # Regularization strength
-}
-
-
 class GridSearchSvdPP:
     """
     Class to perform grid search for hyperparameter tuning of the SVD++ model.
@@ -22,16 +13,16 @@ class GridSearchSvdPP:
 
     def __init__(self,
                  train_matrix: csr_matrix,
-                 train_implicit_rating: dict,
+                 implicit_rating: dict,
                  val_matrix: csr_matrix,
                  user_mapping: dict[str, dict],
                  item_mapping: dict[str, dict],
-                 param_grid: dict[str, list] = _DEFAULT_PARAM_GRID):
+                 param_grid):
         """
         Initializes the grid search object with data and parameters.
 
         :param train_matrix: CSR-format sparse matrix of explicit ratings for training.
-        :param train_implicit_rating: Dictionary of implicit feedback (e.g., views, clicks).
+        :param implicit_rating: Dictionary of implicit feedback (e.g., views, clicks).
         :param val_matrix: CSR-format sparse matrix of validation ratings.
         :param user_mapping: Dicts for user ID to index and index to user ID mappings.
         :param item_mapping: Dicts for item ID to index and index to item ID mappings.
@@ -41,7 +32,7 @@ class GridSearchSvdPP:
 
         self._train_matrix = train_matrix
         self._val_matrix = val_matrix
-        self._train_implicit_rating = train_implicit_rating
+        self._implicit_rating = implicit_rating
 
         self._user_mapping = user_mapping
         self._item_mapping = item_mapping
@@ -54,7 +45,7 @@ class GridSearchSvdPP:
         :return: Trained SVDpp model.
         """
         model = SVDpp(**params)
-        model.fit(ratings=self._train_matrix, implicit_rating=self._train_implicit_rating,
+        model.fit(ratings=self._train_matrix, implicit_rating=self._implicit_rating,
                   user_id_to_idx=self._user_mapping['id_to_idx'], item_id_to_idx=self._item_mapping['id_to_idx'])
 
         return model
