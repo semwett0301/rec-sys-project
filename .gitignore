@@ -1,4 +1,5 @@
 .venv
-.id
+.idea
 
-/eda/dataset_samples2
+eda/dataset_samples
+rec-sys/svd++/modelling/models

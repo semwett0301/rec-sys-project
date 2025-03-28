@@ -4,9 +4,14 @@ seaborn
 numpy==1.26.4
 pandas
 scipy
+scikit-learn
+transformers
+torch
 
 # FS
 pyarrow
+folium
+gender_guesser
 kagglehub
 
 # Fast API
