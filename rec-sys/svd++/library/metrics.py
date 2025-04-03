@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix
 from svdpp import SVDpp
 import heapq
 
-class SvdMetricsCalculator:
+class RmseCalculator:
     def __init__(self, test_matrix: csr_matrix, model: SVDpp, idx_to_user_id: dict[int, str],
                  idx_to_item_id: dict[int, str]):
         self._test_matrix = test_matrix
@@ -85,8 +85,14 @@ class SvdTestMetricsCalculator:
 
         return top_n_items
 
-    # def calculate_rmse(self) -> float:
-    #     return np.sqrt(np.mean((self._test_matrix.data - self._result_matrix.data) ** 2))
+    def calculate_agg_div(self):
+        agg_div_set = set()
+
+        for _, items_list in self._top_n_list.items():
+            for item_rating in items_list:
+                agg_div_set.add(item_rating[0])
+
+        return len(agg_div_set)
 
     def calculate_unexpectedness(self) -> float:
         """

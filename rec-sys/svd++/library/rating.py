@@ -64,7 +64,8 @@ def get_explicit_rating(df: pd.DataFrame, user_field: str, item_field: str, rati
     return rating_matrix, latest_review_matrix, user_mapper, item_mapper
 
 
-def sanity_check_explicit_matrix(explicit_ratings: csr_matrix, last_dates: csr_matrix, review_df: pd.DataFrame) -> pd.DataFrame:
+def sanity_check_explicit_matrix(explicit_ratings: csr_matrix, last_dates: csr_matrix, review_df: pd.DataFrame,
+                                 user_field: str, item_field: str) -> pd.DataFrame:
     """
     Performs a consistency check between explicit rating matrices and the original DataFrame.
 
@@ -78,6 +79,8 @@ def sanity_check_explicit_matrix(explicit_ratings: csr_matrix, last_dates: csr_m
     :param last_dates: CSR matrix where each non-zero entry represents
                        the timestamp of the last review from a user to a business.
     :param review_df: Filtered DataFrame containing user, business, and review data.
+    :param user_field: The column name representing users.
+    :param item_field: The column name representing items.
 
     :return: A DataFrame summarizing the number of interactions and unique pairs across sources.
     """
@@ -86,7 +89,7 @@ def sanity_check_explicit_matrix(explicit_ratings: csr_matrix, last_dates: csr_m
     num_dates = last_dates.nnz
 
     # Number of unique (user_id, business_id) pairs in the source DataFrame
-    num_unique_pairs = review_df.groupby(['user_id', 'business_id']).ngroups
+    num_unique_pairs = review_df.groupby([user_field, item_field]).ngroups
 
     # Build summary table
     sanity_df = pd.DataFrame({
@@ -136,7 +139,8 @@ def get_implicit_rating_out_of_positive_ratings_df(df: pd.DataFrame, user_field:
     return user_item_dict
 
 
-def sanity_check_implicit_rating(initial_df, implicit_ratings, implicit_threshold):
+def sanity_check_implicit_rating(initial_df, implicit_ratings, implicit_threshold, user_field: str, item_field: str,
+                                 rating_field: str):
     """
         Prints a sanity check table comparing filtered reviews with the implicit_ratings structure.
 
@@ -148,11 +152,14 @@ def sanity_check_implicit_rating(initial_df, implicit_ratings, implicit_threshol
         :param initial_df: DataFrame containing the original review data.
         :param implicit_ratings: Dictionary of the form {user_id: {business_id: count}}, representing the derived implicit interactions.
         :param implicit_threshold: Minimum star rating to be considered a positive implicit interaction.
+        :param user_field: The column name representing the user.
+        :param item_field: The column name representing the item.
+        :param rating_field: The column name representing the rating.
 
         :return: A DataFrame containing the sanity check metrics.
         """
     # Filter reviews above the threshold
-    fit_reviews = initial_df[initial_df['stars'] >= implicit_threshold]
+    fit_reviews = initial_df[initial_df[rating_field] >= implicit_threshold]
 
     # Length of filtered reviews
     len_of_fit_reviews = len(fit_reviews)
@@ -163,11 +170,11 @@ def sanity_check_implicit_rating(initial_df, implicit_ratings, implicit_threshol
     )
 
     # Unique user counts
-    users_in_fit_reviews = fit_reviews['user_id'].nunique()
+    users_in_fit_reviews = fit_reviews[user_field].nunique()
     users_in_implicit_ratings = len(implicit_ratings)
 
     # Unique business counts
-    businesses_in_fit_reviews = fit_reviews['business_id'].nunique()
+    businesses_in_fit_reviews = fit_reviews[item_field].nunique()
     unique_business_ids = {
         business_id
         for business_dict in implicit_ratings.values()
@@ -204,17 +211,21 @@ def split_matrix_csr(ratings: csr_matrix, timestamps: csr_matrix, ratios: list) 
     This function splits the input matrices (ratings and timestamps) into multiple output matrices
     based on specified ratios. Each output matrix contains a portion of the original data, selected by sorting
     the elements in each row by timestamp (descending) and then dividing them according to the given proportions.
-
     Steps:
-    1. Validate that the input matrices have the same shape and that the ratios sum to 1.
-    2. Initialize containers to hold the split data for each output matrix.
-    3. For each row in the matrices:
-        a. Extract ratings, timestamps, and column indices for that row.
-        b. Sort the entries in descending order of timestamp.
-        c. Partition the sorted entries according to the provided ratios.
-        d. Append each partition's data, indices, and row pointer to the respective output structure.
-    4. After all rows are processed, reconstruct matrices from the collected data for each partition.
-    5. Return the list of resulting matrices.
+    1. Validate that the ratings and timestamps matrices have the same shape.
+    2. Ensure the sum of all ratios is equal to 1.0.
+    3. Initialize empty containers (data, indices, indptr) for each target split.
+    4. Precompute the ideal number of non-zero entries per split based on the total nnz and the given ratios.
+    5. For each row in the matrix:
+        1. Extract non-zero ratings, timestamps, and their column indices.
+        2. Sort the entries by timestamp in descending order (most recent first).
+        3. Iterate through each ratio:
+            * Compute how many elements to assign to the current split.
+            * Use floor or round to balance the global target distribution.
+            * For the last split, assign all remaining elements to ensure no data is lost.
+            * Append the selected entries to the corresponding split containers.
+    6. Construct new CSR matrices for each split using the collected data.
+    7. Return the list of split CSR matrices.
 
 
     :param ratings: matrix containing ratings
@@ -260,7 +271,8 @@ def split_matrix_csr(ratings: csr_matrix, timestamps: csr_matrix, ratios: list) 
         for j, ratio in enumerate(ratios):
             # Calculate offset (round depends on the current amount in each split / for the last split assign the rest of elements)
             float_offset = len(sorted_ratings) * ratio if j < num_parts - 1 else len(sorted_ratings) - start_idx
-            offset = round(float_offset) if total_filled_cells[j] >= filled_sells_according_to_ratios[j] * ratio else math.floor(float_offset)
+            offset = round(float_offset) if total_filled_cells[j] >= filled_sells_according_to_ratios[
+                j] * ratio else math.floor(float_offset)
 
             # Calculate end index and increase the total cells in the current split
             end_idx = min(start_idx + offset, len(sorted_ratings))
@@ -321,7 +333,7 @@ def sanity_check_explicit_split(train_matrix: csr_matrix, validation_matrix: csr
         'Split': ['Train', 'Validation', 'Test', 'Explicit total', 'Factual total'],
         'Number of interactions': [train_n, validation_n, test_n, sum_n, factual_n],
         'Part of factual interactions': [f"{train_pct}%", f"{validation_pct}%", f"{test_pct}%",
-                       f"{sum_pct}%", "100%"]
+                                         f"{sum_pct}%", "100%"]
     })
 
     return summary_df
