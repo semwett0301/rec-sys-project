@@ -189,8 +189,8 @@ def sanity_check_implicit_rating(initial_df, implicit_ratings, implicit_threshol
             'Number of reviews in implicit_ratings',
             'Unique users in initial reviews',
             'Unique users in implicit_ratings',
-            'Unique businesses in initial reviews',
-            'Unique businesses in implicit_ratings',
+            'Unique items in initial reviews',
+            'Unique items in implicit_ratings',
         ],
         'Value': [
             len_of_fit_reviews,
