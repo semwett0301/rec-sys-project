@@ -56,14 +56,3 @@ class ItemBasedRecommender:
 
         return float(np.clip(weighted_sum / normalization, 1, 5))
 
-    def predict_matrix(self) -> csr_matrix:
-        pred_matrix = self._train_matrix.copy().tolil()
-
-        for user_idx in range(self._train_matrix.shape[0]):
-            for item_idx in range(self._train_matrix.shape[1]):
-                if self._train_matrix[user_idx, item_idx] == 0:
-                    user_id = self._idx_to_user_id[user_idx]
-                    item_id = self._idx_to_item_id[item_idx]
-                    pred_matrix[user_idx, item_idx] = self.predict(user_id, item_id)
-
-        return pred_matrix.tocsr()

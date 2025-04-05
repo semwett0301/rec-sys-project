@@ -1,9 +1,9 @@
-
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from item_based import ItemBasedRecommender
-from metrics_knn_based import KnnMetricsCalculator
+from metrics import RmseCalculator
+
 
 def tune_k(train_matrix, val_matrix, test_matrix, user_mapping, item_mapping, k_values=range(5, 101, 5)):
     print("\nStarting K tuning for Item-Based Collaborative Filtering...")
@@ -13,16 +13,16 @@ def tune_k(train_matrix, val_matrix, test_matrix, user_mapping, item_mapping, k_
         recommender = ItemBasedRecommender(k=k)
         recommender.fit(train_matrix, user_mapping, item_mapping)
 
-        metric_calculator = KnnMetricsCalculator(
-            test_matrix=val_matrix,
+        metric_calculator = RmseCalculator(
+            matrix=val_matrix,
             model=recommender,
             idx_to_user_id=user_mapping['idx_to_id'],
             idx_to_item_id=item_mapping['idx_to_id']
         )
         val_rmse = metric_calculator.calculate_rmse()
 
-        metric_calculator_train = KnnMetricsCalculator(
-            test_matrix=train_matrix,
+        metric_calculator_train = RmseCalculator(
+            matrix=train_matrix,
             model=recommender,
             idx_to_user_id=user_mapping['idx_to_id'],
             idx_to_item_id=item_mapping['idx_to_id']
@@ -55,7 +55,8 @@ def find_elbow_point(results_df):
     window_size = 5
     results_df['ma_rate'] = results_df['rmse_change_rate'].rolling(window=window_size).mean()
 
-    elbow1 = results_df.loc[results_df['rate_of_change'].abs() < results_df['rate_of_change'].abs().mean() * 0.1, 'k'].min()
+    elbow1 = results_df.loc[
+        results_df['rate_of_change'].abs() < results_df['rate_of_change'].abs().mean() * 0.1, 'k'].min()
     elbow2 = results_df[results_df['improvement_percentage'] < 0.5]['k'].min()
     elbow3 = results_df[results_df['ma_rate'] < results_df['ma_rate'].mean() * 0.1]['k'].min()
 
