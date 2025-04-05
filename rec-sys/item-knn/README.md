@@ -1,162 +1,132 @@
-# Item-Based Collaborative Filtering Recommender System
 
-This project implements an item-based collaborative filtering recommender system using the MovieLens 1M dataset. The system uses k-nearest neighbors to find similar items and make recommendations.
+# Item-Based Recommendation System
+
+This folder contains a modular implementation of an **item-based KNN collaborative filtering** recommendation system. The system recommends movies to users by identifying and suggesting items similar. The design is lightweight, interpretable, and well-suited for sparse rating datasets like MovieLens and Netflix.
+
+---
+
+## Project Structure
+
+```
+item-cf/
+├── item_based.py              # Core item-item collaborative filtering model
+├── tune_k_item_based.py       # Hyperparameter tuning for top-k recommendation
+├── movie-lens.ipynb           # MovieLens dataset processing and analysis
+├── netflix.ipynb              # Netflix dataset preparation and experimentation
+└── README.md                  # Project documentation (this file)
+```
+
+---
+
+## Overview
+
+This project implements:
+- An **item-item collaborative filtering algorithm**
+- Memory-based recommendation using **cosine similarity**
+- **Top-k filtering** for selecting most similar items
+- Compatibility with large-scale sparse datasets
+- Efficient matrix handling using `scipy.sparse`
+
+It does not require user profile data or metadata, only interaction history (ratings).
+
+---
 
 ## Features
 
-- Item-based collaborative filtering
-- K-nearest neighbors similarity
-- Mean-centering normalization
-- Comprehensive K value tuning with multiple elbow methods
-- Detailed visualization of model performance
+- Sparse matrix format (CSR) for efficient computation
+- Train/validation/test split for robust evaluation
+- Fine-tunable hyperparameter `k` (number of similar items)
+- Cleanly separated scripts for modeling and tuning
+- Dataset-agnostic implementation
 
-## Plots Generated
+---
 
-The system generates four plots to analyze model performance and K value selection:
+## Implementation Details
 
-1. **Tuning Progress** (`tuning_progress.png`)
-   - Bar chart showing RMSE values for each K
-   - Trend line showing overall pattern
-   - Vertical line marking the best K value
-   - Purpose: Visualize overall tuning progress and identify optimal K
+### 1. **Core Recommender (`item_based.py`)**
+- Computes **cosine similarity** between item vectors
+- For a given user, recommends top-k similar items not yet rated
+- Optimized with sparse matrix ops (`scipy.sparse`)
 
-2. **K Selection Analysis** (`k_selection_analysis.png`)
-   - 2x2 grid of plots showing different elbow methods:
-     - Top Left: RMSE vs K with all elbow points
-     - Top Right: Second Derivative Method
-     - Bottom Left: Percentage Improvement Method
-     - Bottom Right: Moving Average Method
-   - Purpose: Compare different methods for finding the elbow point
+### 2. **Hyperparameter Tuning (`tune_k_item_based.py`)**
+- Tests various values of `k` (number of top similar items)
+- Uses held-out validation data to evaluate performance
+- Check RMSE on validation
 
-3. **Learning Curves** (`learning_curves.png`)
-   - Training and validation RMSE over different K values
-   - Shows model performance on both sets
-   - Purpose: Analyze model learning behavior
+### 3. **Notebook Analysis**
 
-4. **Overfitting Gap** (`overfitting_gap.png`)
-   - Difference between validation and training RMSE
-   - Shows how much the model overfits at different K values
-   - Purpose: Analyze model generalization
+#### `movie-lens.ipynb`
+- Loads and preprocesses MovieLens dataset
+- Converts timestamps, builds rating matrix
+- Splits into train / validation / test
+- Checks data integrity
 
-## Usage
+#### `netflix.ipynb`
+- Loads and preprocesses Netflix dataset
+- Converts timestamps, builds rating matrix
+- Splits into train / validation / test
+- Checks data integrity
 
-1. Ensure you have the required data files:
-   - `/Users/masoud/Downloads/MovieLens_1M_Dataset/train.csv`
-   - `/Users/masoud/Downloads/MovieLens_1M_Dataset/test.csv`
+---
 
-2. Run the main script:
-   ```bash
-   python item_based.py
-   ```
-   This will:
-   - Run K tuning analysis
-   - Generate all four plots
-   - Train the final model with optimal K
-   - Show model performance metrics
-   - Generate sample recommendations
+## Sample Workflow
 
-## Requirements
+1. Load dataset and convert to rating matrix
+2. Split into train / validation / test
+3. Fit model using training data
+4. Recommend top-k items per user using cosine similarity
+5. Evaluate using notebook cells or custom metrics
 
-- Python 3.x
-- Required packages:
-  - numpy
-  - pandas
-  - scipy
-  - scikit-learn
-  - matplotlib
-  - tqdm
+---
 
-## Code Structure
+## Performance Metrics
 
-- `item_based.py`: Main recommender system implementation
-- `tune_k.py`: K value tuning and visualization
+These evaluations assess the **RMSE, Relevance, Coverage, diversity, novelty**, and **serendipity** of the recommendations produced by the item-based collaborative filtering model.
 
-## Model Details
+### MovieLens Dataset
 
-The recommender system:
-1. Normalizes ratings by subtracting user means
-2. Computes item-item similarity using cosine similarity
-3. Uses k-nearest neighbors to find similar items
-4. Makes predictions based on weighted average of similar items' ratings
-5. Evaluates performance using RMSE metric
+| Metric                          | Area               | Value     | Value Range  | Meaning                                                                 |
+|---------------------------------|--------------------|-----------|--------------|-------------------------------------------------------------------------|
+| Recovery                        | Relevance          | None      | [0, 0.9]     | How early relevant items appear in top-N recommendations                |
+| Normalized AggDiv (diversity)   | Inter-user diversity | 0.134171 | [0, 1]       | Proportion of unique items recommended across all users                |
+| Normalized AggDiv (coverage)    | Coverage           | 0.355368  | [0, 1]       | Proportion of unique items recommended across all users vs catalog     |
+| Item Space Coverage             | Coverage           | 25.031    | [0, ∞]       | Total number of unique items recommended and their frequency            |
+| Normalized ItemDeg              | Novelty            | 0.883     | [0, 1]       | Novelty based on inverse item popularity                               |
+| Unexpectedness (no relevance)   | Serendipity        | 0.873     | [0, 1]       | Proportion of unexpected (less popular) items                          |
+| Serendipity (with relevance)    | Serendipity        | 0.0       | [0, 1]       | Proportion of unexpected and relevant items                            |
+| RMSE                            | Relevance          | 1.072     | [0, 6]       | Root Mean Square Error of predicted vs actual ratings                  |
 
-## K Value Selection
+---
 
-The system uses three methods to find the optimal K value:
-1. Second Derivative Method: Finds where the rate of change levels off
-2. Percentage Improvement Method: Finds where improvements become minimal
-3. Moving Average Method: Smoothes the rate of change to find the elbow
+### Netflix Dataset
 
-The final K value is selected based on the consensus of these methods.
+| Metric                          | Area               | Value     | Value Range  | Meaning                                                                 |
+|---------------------------------|--------------------|-----------|--------------|-------------------------------------------------------------------------|
+| Recovery                        | Relevance          | None      | [0, 0.9]     | How early relevant items appear in top-N recommendations                |
+| Normalized AggDiv (diversity)   | Inter-user diversity | 0.073533 | [0, 1]       | Proportion of unique items recommended across all users                |
+| Normalized AggDiv (coverage)    | Coverage           | 0.573308  | [0, 1]       | Proportion of unique items recommended across all users vs catalog     |
+| Item Space Coverage             | Coverage           | 21.595    | [0, ∞]       | Total number of unique items recommended and their frequency            |
+| Normalized ItemDeg              | Novelty            | 0.891     | [0, 1]       | Novelty based on inverse item popularity                               |
+| Unexpectedness (no relevance)   | Serendipity        | 0.882     | [0, 1]       | Proportion of unexpected (less popular) items                          |
+| Serendipity (with relevance)    | Serendipity        | 0.0       | [0, 1]       | Proportion of unexpected and relevant items                            |
+| RMSE                            | Relevance          | 0.922     | [0, 6]       | Root Mean Square Error of predicted vs actual ratings                  |
 
-## Output
+---
 
-The system provides:
-1. K tuning results showing RMSE for different K values
-2. Best K value found
-3. Overall dataset statistics
-4. Detailed user analysis including:
-   - Total items rated
-   - Average rating
-   - Rating range
-   - Rating distribution
-   - Predictions for test set items
+### Final Comparison Table
 
-## How It Works
+| Metric                        | MovieLens | Netflix  | Conclusion                                                                 |
+|------------------------------|-----------|----------|----------------------------------------------------------------------------|
+| Recovery                     | None      | None     | Recovery is not available for either (no relevant item in top-N)           |
+| Normalized AggDiv (diversity)| 0.134     | 0.074    | MovieLens delivers more diverse recommendations                           |
+| Normalized AggDiv (coverage) | 0.355     | 0.573    | Netflix covers more of the item catalog                                   |
+| Item Space Coverage          | 25.031    | 21.595   | MovieLens includes slightly more variety in unique item recommendations   |
+| Normalized ItemDeg (novelty) | 0.883     | 0.891    | Netflix provides slightly more novel recommendations                      |
+| Unexpectedness               | 0.873     | 0.882    | Netflix yields marginally more unexpected items                           |
+| Serendipity                  | 0.0       | 0.0      | Neither model surfaces unexpected yet relevant items                      |
+| RMSE                         | 1.072     | 0.922    | Netflix produces more accurate predictions                                |
 
-1. **Data Loading**:
-   - Loads training and test data
-   - Creates user and item mappings
-   - Normalizes ratings
+---
 
-2. **Training**:
-   - Computes item-item similarity matrix using cosine similarity
-   - Finds K nearest neighbors for each item
-   - Stores similarity scores and neighbor indices
-
-3. **Prediction**:
-   - Uses weighted average of similar items' ratings
-   - Accounts for user's mean rating
-   - Clips predictions to rating range (1-5)
-
-4. **Evaluation**:
-   - Uses RMSE to evaluate prediction accuracy
-   - Considers only items in the test set
-
-## Example Output
-
-```
-K Tuning Results:
-==================================================
-Best K value: 100
-Best RMSE: 0.969527
-
-All Results:
-   k    rmse
-   5  1.048587
-  10  1.023456
-  15  1.001234
-  ...
-100  0.969527
-==================================================
-
-Overall Dataset Statistics:
-Total users: 6040
-Total items: 3706
-Total ratings: 1000209
-Average rating: 3.58
-Rating distribution:
-1    6110
-2    11370
-3    27145
-4    34174
-5    15110
-```
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+**Summary:**  
+Netflix recommendations are **more accurate and novel**, with **broader coverage**. MovieLens performs slightly better in **inter-user diversity** but less in accuracy. Both systems lack meaningful **serendipity** due to the absence of relevant unexpected items in top-N lists.
