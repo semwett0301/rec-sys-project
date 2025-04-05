@@ -232,7 +232,7 @@ class TestMetricsCalculator:
         """
         Returns basic statistics about the test matrix and item popularity.
         """
-        relevant_pairs = (self._test_matrix.data > self._relevance_threshold).sum()
+        relevant_pairs = (self._test_matrix.data >= self._relevance_threshold).sum()
         potential_pairs = self._test_matrix.nnz
         all_pairs = self._test_matrix.shape[0] * self._test_matrix.shape[1]
 
