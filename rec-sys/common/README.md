@@ -26,6 +26,7 @@ common/
   - **Serendipity** (with/without relevance)
 - Works with recommendation dictionaries and sparse matrices
 - Fully compatible with top-N recommendation outputs
+- Contain the classes for RMSE and classification-based metrics calculations
 
 ### `rating.py`
 - Functions to:
@@ -33,24 +34,7 @@ common/
   - Map original user/item IDs to internal matrix indices
   - Handle both explicit and implicit feedback formats
 
----
 
-## 🧪 Usage Example
-
-```python
-from common.metrics import TestMetricsCalculator
-from common.rating import prepare_rating_matrix
-
-# Prepare test matrix from DataFrame
-test_matrix, user_map, item_map = prepare_rating_matrix(rating_df)
-
-# Evaluate recommendation model
-metrics = TestMetricsCalculator(test_matrix, model, user_map, item_map, n=10)
-print(metrics.calculate_item_space_coverage())
-print(metrics.calculate_normalized_item_deg())
-```
-
----
 
 ## ✅ Designed For
 
