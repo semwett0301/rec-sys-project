@@ -14,6 +14,7 @@ class Predictable(Protocol):
     def predict(self, user_id: str, item_id: str) -> float:
         ...
 
+
 # RMSE calculator that evaluates a Predictable model against a test matrix
 class RmseCalculator:
     def __init__(self, matrix: csr_matrix, model: Predictable, idx_to_user_id: dict[int, str],
@@ -40,18 +41,21 @@ class RmseCalculator:
         """
         return np.sqrt(np.mean((self._test_matrix.data - self._result_matrix.data) ** 2))
 
+
 # Class for "non-accuracy" metrics calculation
 class TestMetricsCalculator:
     def __init__(self, test_matrix: csr_matrix, model: Predictable,
                  idx_to_user_id: dict[int, str],
                  idx_to_item_id: dict[int, str],
+                 relevance_threshold = 1,
                  n: int = 10):
         """
         Initializes the calculator for various evaluation metrics.
-        - test_matrix: user-item interaction test matrix
-        - model: the recommendation model that implements .predict(user_id, item_id)
-        - idx_to_user_id / idx_to_item_id: mapping from matrix indices to original IDs
-        - n: top-N recommendation list size
+        - :param test_matrix: user-item interaction test matrix
+        - :param model: the recommendation model that implements .predict(user_id, item_id)
+        - :param idx_to_user_id / idx_to_item_id: mapping from matrix indices to original IDs
+        - :param relevance_threshold: the threshold when we decide that user assessed item relevant for him
+        - :param n: top-N recommendation list size
         """
         self._model = model
         self._test_matrix = test_matrix
@@ -59,9 +63,10 @@ class TestMetricsCalculator:
         self._idx_to_item_id = idx_to_item_id
 
         self._top_n = n
-        self._top_n_list = self._generate_top_n(n) # dict of top-N recommendations per user
+        self._relevance_threshold = relevance_threshold
+        self._top_n_list = self._generate_top_n(n)  # dict of top-N recommendations per user
 
-        self._item_popularity = self._calculate_item_popularity() # dict <item_idx> - <item_popularity>
+        self._item_popularity = self._calculate_item_popularity()  # dict <item_idx> - <item_popularity>
 
     def _calculate_item_popularity(self):
         """
@@ -83,7 +88,8 @@ class TestMetricsCalculator:
         for item_idx in recommended_item_list:
             # Get the number of users who interacted with this item (non-zero entries in the item's column)
             current_popularity = self._test_matrix.getcol(item_idx).nnz / self._test_matrix.shape[0]
-            item_popularity[item_idx] = current_popularity
+            item_popularity[
+                item_idx] = current_popularity if current_popularity > 0 else 1e-10  # Because otherwise it's possible to get an error
 
             logging.info(f"Calculate item popularity for item {item_idx} - {current_popularity}")
 
@@ -94,7 +100,7 @@ class TestMetricsCalculator:
         Checks whether the given item is relevant to the user (i.e., non-zero entry in test matrix).
         """
         relevant_items = self._test_matrix[user_idx]
-        return relevant_items[0, item_idx] != 0
+        return relevant_items[0, item_idx] >= self._relevance_threshold
 
     def _set_top_n(self, n: int):
         """
@@ -156,6 +162,50 @@ class TestMetricsCalculator:
 
         return top_n_items
 
+    def generate_metrics_summary_df(self, rmse: float = None) -> pd.DataFrame:
+        """
+        Generates a summary DataFrame with key evaluation metrics:
+        RMSE, Recovery, Diversity, Novelty, Serendipity, etc.
+
+        :return: pandas DataFrame with columns: Metric, Area, Value, Value Range, Meaning
+        """
+        # Check for recovery
+        recovery = self.calculate_recovery()
+        recovery_display = recovery if recovery is not None else "None"
+
+        # Metrics calculation
+        normalized_aggdiv = self.calculate_agg_div()
+        normalized_aggdiv_coverage = self.calculate_agg_div(is_coverage=True)
+
+        serendipity = self.calculate_serendipity(with_relevance=True)
+        unexpectedness = self.calculate_serendipity(with_relevance=False)
+
+        item_space_coverage = self.calculate_item_space_coverage()
+        normalized_item_deg = self.calculate_normalized_item_deg()
+
+        data = [
+            ["Recovery", "Relevance", recovery_display, f"[0, {round(1 - 1 / self._top_n, 3)}]",
+             "How early relevant items appear in top-N recommendations"],
+            ["Normalized AggDiv (diversity)", "Inter-user diversity", normalized_aggdiv, "[0, 1]",
+             "Proportion of unique items recommended across all users divided by the amount of recommendations"],
+            ["Normalized AggDiv (coverage)", "Coverage", normalized_aggdiv_coverage, "[0, 1]",
+             "Proportion of unique items recommended across all users divided by the size of catalog"],
+            ["Item Space Coverage", "Coverage", round(item_space_coverage, 3), "[0, Not defined]",
+             "Shows how many unique items and how often appears in the RLs (ideally a lot of different items recommended uniformly)"],
+            ["Normalized ItemDeg", "Novelty", round(normalized_item_deg, 3), "[0, 1]",
+             "Novelty of recommended items based on inverse (log) item popularity"],
+            ["Unexpectedness (no relevance)", "Serendipity", round(unexpectedness, 3), "[0, 1]",
+             "Proportion of items that are unexpected (less popular than average)"],
+            ["Serendipity (with relevance)", "Serendipity", round(serendipity, 3), "[0, 1]",
+             "Proportion of unexpected and relevant items in top-N recommendations"]
+        ]
+
+        if rmse:
+            data.append(["RMSE", "Relevance", round(rmse, 3), "[0, 6]",
+                         "Root Mean Square Error between predicted and actual ratings"])
+
+        return pd.DataFrame(data, columns=["Metric", "Area", "Value", "Value Range", "Meaning"])
+
     def get_range_of_metrics(self):
         """
         Returns the theoretical min/max range of all metrics along with their explanations.
@@ -163,13 +213,15 @@ class TestMetricsCalculator:
         max_recovery = 1 - 1 / self._top_n
 
         return pd.DataFrame({
-            "Metric": ["Item space coverage", "Recovery", "Normalized AggDiv", "Unexpectedness (with_relevance=False)", "Serendipity (with_relevance=True)", "Normalized ItemDeg"],
-            "Min": [0, 0, 0, 0, 0, 0],
-            "Max": [1, max_recovery, 1, 1, 1, 1],
+            "Metric": ["Item space coverage", "Recovery", "Normalized AggDiv (diversity)", "Normalized AggDiv (coverage)", "Unexpectedness (with_relevance=False)",
+                       "Serendipity (with_relevance=True)", "Normalized ItemDeg"],
+            "Min": [0, 0, 0, 0, 0, 0, 0],
+            "Max": ["Not defined", max_recovery, 1, 1, 1, 1, 1],
             "Explanation": [
-                "0 - all users got the same recommendation list, 1 - no duplicates across the recommendation lists",
+                "small - recommendations focuses on several item only or aren't balanced, big - recommendations are distributed uniformly across a lot of items",
                 f"0 - all the relevant items on the top of the list, {max_recovery} - all relevant items in the bottom of the list, None - no relevant items in the RLs",
-                "0 - only 1 item were recommended for everyone, 1 - recommendations cover all the catalog",
+                "0 - only 1 item was recommended for everyone, 1 - all recommendations are different",
+                "0 - only 1 item was recommended, 1 - all the items from catalog were recommended",
                 "0 - there is no unexpected item (popularity below the average) in all RLs, 1 - all the items are unexpected",
                 "0 - there is no serendipitous item (popularity below the average + relevant) in all RLs, 1 - all the items are serendipitous",
                 "0 - the most popular items are used (no novelty), 1 - all items are the most unpopular (the best novelty)",
@@ -180,13 +232,19 @@ class TestMetricsCalculator:
         """
         Returns basic statistics about the test matrix and item popularity.
         """
+        relevant_pairs = (self._test_matrix.data > self._relevance_threshold).sum()
+        potential_pairs = self._test_matrix.nnz
+        all_pairs = self._test_matrix.shape[0] * self._test_matrix.shape[1]
+
         test_set_statistic = pd.Series({
             "Mean popularity": sum(self._item_popularity.values()) / len(self._item_popularity.values()),
             "Max popularity": max(self._item_popularity.values()),
             "Min popularity": min(self._item_popularity.values()),
-            "Number of pairs": self._test_matrix.shape[0] * self._test_matrix.shape[1],
-            "Relevant pairs (u-i)": self._test_matrix.nnz,
-            "% of relevant pairs": self._test_matrix.nnz / (self._test_matrix.shape[0] * self._test_matrix.shape[1]) * 100
+            "Number of pairs": all_pairs,
+            "Non-null pairs (u-i)": potential_pairs,
+            "% of non-null pairs": potential_pairs / all_pairs * 100,
+            "Relevant pairs (u-i)": relevant_pairs,
+            "% of relevant pairs": relevant_pairs / all_pairs * 100,
         })
 
         test_set_statistic = test_set_statistic.apply(lambda x: f"{x:.6f}")
@@ -238,41 +296,30 @@ class TestMetricsCalculator:
 
     def calculate_item_space_coverage(self) -> float:
         """
-        Calculates the Item Space Coverage (ISC) using normalized Shannon entropy.
+        Calculates item space coverage using Shannon entropy over how often
+        each item appears in users' top-N recommendation lists.
 
-        This metric measures how evenly the recommender system distributes its recommendations
-        across the item catalog. It captures the diversity of items across all users.
-
-        - If the model recommends the same items to all users → low coverage (entropy near 0)
-        - If it recommends a wide and balanced variety of items → high coverage (entropy near 1)
-
-        :return: a float in the range [0, 1], where:
-                - 0 = poor coverage (no diversity)
-                - 1 = maximum coverage (highly diverse item distribution)
+        :return: a float representing unnormalized entropy (higher = more diverse coverage).
         """
+        # Count how many users received each item in their top-N
+        item_occurrence = Counter()
 
-        # Flatten all top-N recommendation lists across all users into one list of item indices
-        all_items = [item for user_recs in self._top_n_list.values() for item, _ in user_recs]
+        for top_list in self._top_n_list.values():
+            unique_items = {item_idx for item_idx, _ in top_list}  # avoid duplicates per user
+            item_occurrence.update(unique_items)
 
-        # Count how many times each item was recommended
-        item_counts = Counter(all_items)
-        total_recs = len(all_items)
+        total_users = len(self._top_n_list)
 
-        # Compute the maximum possible entropy (uniform distribution over all recommended items)
-        # This is used to normalize the result to the [0, 1] range
-        max_entropy = math.log(len(item_counts)) if len(item_counts) > 1 else 1
+        # Convert counts into probabilities
+        p_dict = {
+            item_idx: count / total_users
+            for item_idx, count in item_occurrence.items()
+        }
 
-        # Compute the Shannon entropy of the item distribution
-        # Entropy = -Σ p(i) * log(p(i)), where p(i) = count(i) / total_recommendations
-        entropy = -sum(
-            (count / total_recs) * math.log(count / total_recs)
-            for count in item_counts.values()
-        )
+        # Compute entropy (unnormalized)
+        return -sum(p * math.log(p) for p in p_dict.values())
 
-        # Normalize entropy to the [0, 1] range
-        normalized_entropy = entropy / max_entropy
 
-        return normalized_entropy
 
     def calculate_recovery(self):
         """
@@ -320,7 +367,7 @@ class TestMetricsCalculator:
         # Return the average recovery score across all users
         return total_recovery / total_users
 
-    def calculate_normalized_agg_div(self):
+    def calculate_agg_div(self, is_coverage=False):
         """
         Calculate the Normalized Aggregate Diversity of the recommendations.
 
@@ -337,8 +384,8 @@ class TestMetricsCalculator:
             for item_rating in items_list:
                 agg_div_set.add(item_rating[0])  # Add the item ID (not the rating)
 
-        # Normalize the count of unique recommended items by total number of items
-        return len(agg_div_set) / self._test_matrix.shape[1]
+        max_n = self._top_n * len(self._top_n_list.keys()) if not is_coverage else self._test_matrix.shape[1]
+        return len(agg_div_set) / max_n
 
     def calculate_serendipity(self, with_relevance=True) -> float:
         """
@@ -387,4 +434,3 @@ class TestMetricsCalculator:
             return 0.0
 
         return total_serendipity / user_count
-
