@@ -19,12 +19,8 @@ This project implements and compares various recommendation system algorithms ac
 │   └── svd++/              # SVD++ matrix factorization
 │
 ├── backend/                # FastAPI backend service
-│   ├── app/                # Application code
-│   │   ├── api/           # API endpoints
-│   │   ├── models/        # Database models
-│   │   ├── services/      # Business logic
-│   │   └── utils/         # Utility functions
-│   └── tests/             # Backend tests
+│   ├── main.py                    # Controller file with API
+│   └── recommendation_service.py  # Service that contains pickle objects and dataset information
 │
 ├── frontend/              # React frontend application
    ├── src/               # Source code
