@@ -13,7 +13,7 @@ import {
     TextField,
     Typography
 } from '@mui/material';
-import {NamesList} from "./components/NamesList.tsx";
+import {IdsList} from "./components/IdsList.tsx";
 import {Model} from "./types/Model.ts";
 import {Dataset} from "./types/Dataset.ts";
 import {ServerResponse} from "./types/ServerResponse.ts";
@@ -55,7 +55,7 @@ const datasets: Dataset[] = [
     },
 ]
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL = "http://127.0.0.1:8000/recommend";
 
 const App: React.FC = () => {
     const [model, setModel] = useState<string>('');
@@ -186,7 +186,7 @@ const App: React.FC = () => {
                 </Box>
             </Paper>
 
-            <NamesList names={names} loading={loading}/>
+            <IdsList names={names} loading={loading}/>
         </Container>
     );
 };

@@ -6,7 +6,7 @@ interface NamesListProps {
     loading: boolean;
 }
 
-export const NamesList: React.FC<NamesListProps> = ({names, loading}) => {
+export const IdsList: React.FC<NamesListProps> = ({names, loading}) => {
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" mt={4}>
@@ -17,9 +17,7 @@ export const NamesList: React.FC<NamesListProps> = ({names, loading}) => {
 
     return (
         <Paper elevation={2} sx={{mt: 4, p: 2}}>
-            <Typography variant="h6" gutterBottom>
-                Names List
-            </Typography>
+            <Typography variant="h6" gutterBottom>The list of item ids</Typography>
             {names.length === 0 ? (
                 <Typography color="textSecondary">No names to display. Add some names!</Typography>
             ) : (
