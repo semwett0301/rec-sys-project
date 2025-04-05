@@ -3,7 +3,7 @@ import logging
 from scipy.sparse import csr_matrix
 from sklearn.model_selection import ParameterGrid
 
-from metrics import SvdMetricsCalculator
+from metrics import RmseCalculator
 from svdpp import SVDpp
 
 class GridSearchSvdPP:
@@ -57,11 +57,11 @@ class GridSearchSvdPP:
         :param model: Trained SVD++ model.
         :return: SvdMetricsCalculator instance.
         """
-        return SvdMetricsCalculator(
+        return RmseCalculator(
             model=model,
             idx_to_item_id=self._item_mapping['idx_to_id'],
             idx_to_user_id=self._user_mapping['idx_to_id'],
-            test_matrix=self._val_matrix
+            matrix=self._val_matrix
         )
 
     def run(self) -> tuple[tuple[int] | None, float, SVDpp | None]:
