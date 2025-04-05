@@ -29,9 +29,9 @@ This project implements and compares various recommendation system algorithms ac
 ├── frontend/              # React frontend application
    ├── src/               # Source code
    │   ├── components/    # React components
-   │   ├── pages/         # Page components
-   │   ├── services/      # API services
-   │   └── utils/         # Utility functions
+   │   ├── types          # Types of TS
+   │   ├── App.tsx        # Main component
+   │   └── main.ts        # Start point
    └── public/            # Static assets
 ```
 
