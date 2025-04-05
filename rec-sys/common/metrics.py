@@ -22,6 +22,15 @@ class RankingPredictable(Protocol):
 class RankingMetricsEvaluator:
     def __init__(self, matrix: csr_matrix, model: RankingPredictable, user_mapping: dict[str, dict],
                  item_mapping: dict[str, dict], top_n: int = 10):
+        """
+        Initializes the RankingMetricsEvaluator with the required inputs.
+
+        :param matrix: Sparse user-item test interaction matrix.
+        :param model: Model that implements a `predict(user_id, top_n)` method.
+        :param user_mapping: Dictionary with 'idx_to_id' and 'id_to_idx' mappings for users.
+        :param item_mapping: Dictionary with 'idx_to_id' and 'id_to_idx' mappings for items.
+        :param top_n: Number of top items to consider for evaluation (default is 10).
+        """
         self._test_matrix = matrix
         self._model = model
         self._top_n = top_n
@@ -32,10 +41,16 @@ class RankingMetricsEvaluator:
         self._num_users = matrix.shape[0]
         self._num_items = matrix.shape[1]
 
-        # Precompute all predictions and ground truths for consistent evaluation
+        # Precompute predictions and ground truths for all users
         self._evaluation_for_user = self._evaluate_per_user()
 
     def _evaluate_per_user(self):
+        """
+        Evaluates predictions for each user by generating binary vectors indicating
+        true and predicted interactions.
+
+        :return: Tuple of two numpy arrays: (y_true, y_pred), each of shape (num_users, num_items).
+        """
         all_y_true = []
         all_y_pred = []
 
@@ -46,7 +61,6 @@ class RankingMetricsEvaluator:
             predicted_items = set(self._model.predict(user_id, self._top_n))
             predicted_items = {self._item_mapping['id_to_idx'][item] for item in predicted_items}
 
-            # Skip users with no ground truth
             if not true_items:
                 continue
 
@@ -61,6 +75,11 @@ class RankingMetricsEvaluator:
         return np.array(all_y_true), np.array(all_y_pred)
 
     def calculate_precision(self) -> float:
+        """
+        Calculates the average precision score across all users.
+
+        :return: Mean precision score.
+        """
         y_true, y_pred = self._evaluation_for_user
         if len(y_true) == 0:
             return 0.0
@@ -69,6 +88,11 @@ class RankingMetricsEvaluator:
         ])
 
     def calculate_recall(self) -> float:
+        """
+        Calculates the average recall score across all users.
+
+        :return: Mean recall score.
+        """
         y_true, y_pred = self._evaluation_for_user
         if len(y_true) == 0:
             return 0.0
@@ -77,6 +101,11 @@ class RankingMetricsEvaluator:
         ])
 
     def calculate_f1(self) -> float:
+        """
+        Calculates the average F1-score across all users.
+
+        :return: Mean F1 score.
+        """
         y_true, y_pred = self._evaluation_for_user
         if len(y_true) == 0:
             return 0.0
@@ -85,6 +114,11 @@ class RankingMetricsEvaluator:
         ])
 
     def calculate_accuracy(self) -> float:
+        """
+        Calculates the average accuracy score across all users.
+
+        :return: Mean accuracy score.
+        """
         y_true, y_pred = self._evaluation_for_user
         if len(y_true) == 0:
             return 0.0
@@ -94,7 +128,9 @@ class RankingMetricsEvaluator:
 
     def summary(self) -> Series:
         """
-        Returns a dictionary summarizing all key metrics.
+        Returns a summary of evaluation metrics including precision, recall, F1, and accuracy.
+
+        :return: A pandas Series containing average Precision, Recall, F1, and Accuracy scores.
         """
         y_true, y_pred = self._evaluation_for_user
         if len(y_true) == 0:
