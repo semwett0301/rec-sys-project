@@ -77,74 +77,95 @@ The following metrics are used to evaluate recommendation systems:
 
 ### Relevance Metrics
 
-| Metric   | MovieLens<br>(CF) | Yelp<br>(CF) | MovieLens<br>(ItemKNN) | MovieLens<br>(UserKNN) | Yelp<br>(ItemKNN) | Yelp<br>(UserKNN) | Netflix<br>(CF) |
-|----------|-------------------|--------------|------------------------|------------------------|-------------------|-------------------|-----------------|
-| Recovery | None              | None         | 0.4857                 | 0.5214                 | 0.5439            | 0.3733            | None            |
-| RMSE     | 0.988             | 1.179        | Not provided           | Not provided           | Not provided      | Not provided      | 0.922           |
-
+| Model | Dataset | F1 Score | Recovery | RMSE | 
+|-------|---------|----------|----------|------|
+| Collaborative-based | MovieLens | N/A | None | 1.072 |
+| Collaborative-based | Netflix | N/A | None | 0.922 |
+| Content-based ItemKNN | MovieLens | 0.003 | 0.486 | N/A |
+| Content-based ItemKNN | Yelp | 0.003 | 0.544 | N/A |
+| Content-based UserKNN | MovieLens | 0.009 | 0.521 | N/A |
+| Content-based UserKNN | Yelp | 0.001 | 0.373 | N/A |
+| SVD++ | MovieLens | N/A | None | 0.988 |
+| SVD++ | Yelp | N/A | None | 1.179 |
 
 **Key Findings:**
-- KNN-based approaches show measurable Recovery metrics unlike base CF models
-- ItemKNN performs better on Yelp dataset for relevant item surfacing
-- UserKNN shows stronger performance on MovieLens for Recovery
-- Netflix provides the most accurate rating predictions (lowest RMSE)
-- MovieLens demonstrates better prediction accuracy than Yelp with CF models
+- Collaborative-based shows best RMSE on Netflix (0.922)
+- Content-based UserKNN achieves highest F1 score on MovieLens (0.009)
+- Content-based ItemKNN shows best Recovery on Yelp (0.544)
+- Content-based approaches focus on F1 score rather than RMSE
+- SVD++ provides consistent RMSE across datasets
 
 ### Diversity & Coverage Metrics
 
-| Metric                        | MovieLens<br>(CF) | Yelp<br>(CF) | MovieLens<br>(ItemKNN) | MovieLens<br>(UserKNN) | Yelp<br>(ItemKNN) | Yelp<br>(UserKNN) | Netflix<br>(CF) |
-|-------------------------------|-------------------|--------------|------------------------|------------------------|-------------------|-------------------|-----------------|
-| Normalized AggDiv (diversity) | 0.01541           | 0.043927     | 0.1109                 | 0.0251                 | 0.3780            | 0.1126            | 0.073533        |
-| Normalized AggDiv (coverage)  | 0.040816          | 0.073406     | 0.2937                 | 0.0665                 | 0.6317            | 0.1882            | 0.573308        |
-| Item Space Coverage           | 10.087            | 21.383       | 24.6850                | 22.4520                | 56.5810           | 49.3110           | 21.595          |
+| Model | Dataset | Normalized AggDiv (diversity) | Normalized AggDiv (coverage) | Item Space Coverage |
+|-------|---------|------------------------------|----------------------------|-------------------|
+| Collaborative-based | MovieLens | 0.134171 | 0.355368 | 25.031 |
+| Collaborative-based | Netflix | 0.073533 | 0.573308 | 21.595 |
+| Content-based ItemKNN | MovieLens | 0.110888 | 0.293700 | 24.685 |
+| Content-based ItemKNN | Yelp | 0.378007 | 0.631688 | 56.581 |
+| Content-based UserKNN | MovieLens | 0.0251 | 0.0665 | 22.452 |
+| Content-based UserKNN | Yelp | 0.112618 | 0.188196 | 49.311 |
+| SVD++ | MovieLens | 0.01541 | 0.040816 | 10.087 |
+| SVD++ | Yelp | 0.043927 | 0.073406 | 21.383 |
 
 **Key Findings:**
-- ItemKNN on Yelp significantly outperforms all other systems in diversity and coverage
-- KNN approaches generally deliver better diversity than base CF models
-- Netflix CF model shows impressive catalog coverage despite having lower diversity
-- Content-rich datasets (Yelp) benefit more from content-based approaches for diversity
-- There's a general trade-off between accuracy and diversity across most models
+- Content-based ItemKNN on Yelp shows highest diversity (0.378) and coverage (0.632)
+- Collaborative-based on Netflix achieves strong coverage (0.573) despite lower diversity
+- Content-based UserKNN shows moderate performance across metrics
+- SVD++ shows lower diversity and coverage compared to other approaches
+- Yelp dataset generally enables better diversity and coverage
 
 ### Novelty & Serendipity Metrics
 
-| Metric                        | MovieLens<br>(CF) | Yelp<br>(CF) | MovieLens<br>(ItemKNN) | MovieLens<br>(UserKNN) | Yelp<br>(ItemKNN) | Yelp<br>(UserKNN) | Netflix<br>(CF) |
-|-------------------------------|-------------------|--------------|------------------------|------------------------|-------------------|-------------------|-----------------|
-| Normalized ItemDeg (novelty)  | 0.29              | 0.654        | 0.6220                 | 0.4740                 | 0.7090            | 0.6280            | 0.891           |
-| Unexpectedness                | 0.548             | 0.615        | 0.5880                 | 0.4370                 | 0.6710            | 0.5870            | 0.882           |
-| Serendipity                   | 0.0               | 0.0          | 0.0                    | 0.0                    | 0.0               | 0.0               | 0.0             |
+| Model | Dataset | Normalized ItemDeg | Unexpectedness | Serendipity |
+|-------|---------|-------------------|----------------|-------------|
+| Collaborative-based | MovieLens | 0.883 | 0.873 | 0.0 |
+| Collaborative-based | Netflix | 0.891 | 0.882 | 0.0 |
+| Content-based ItemKNN | MovieLens | 0.622 | 0.588 | 0.0 |
+| Content-based ItemKNN | Yelp | 0.709 | 0.671 | 0.0 |
+| Content-based UserKNN | MovieLens | 0.474 | 0.437 | 0.0 |
+| Content-based UserKNN | Yelp | 0.628 | 0.587 | 0.0 |
+| SVD++ | MovieLens | 0.29 | 0.548 | 0.0 |
+| SVD++ | Yelp | 0.654 | 0.615 | 0.0 |
 
 **Key Findings:**
-- Netflix CF model achieves the highest novelty scores overall
-- Yelp-ItemKNN provides the strongest performance among KNN approaches
-- All systems consistently fail to deliver serendipitous recommendations
-- ItemKNN generally outperforms UserKNN for novelty metrics
-- CF approaches on Netflix show particularly strong novelty despite good accuracy
+- Collaborative-based consistently achieves highest novelty scores
+- Collaborative-based on Netflix shows best novelty (0.891) and unexpectedness (0.882)
+- All models fail to achieve serendipity (all 0.0)
+- Content-based UserKNN shows moderate novelty performance
+- SVD++ shows lower novelty but competitive unexpectedness
 
 ## Conclusions 
 
 1. **Best Overall Performance:**
-   - **Yelp + ItemKNN** delivers the strongest combined results across exploration metrics
-   - **Netflix CF** shows an impressive balance between accuracy and novelty
-   - **MovieLens + UserKNN** performs slightly better for relevance but underperforms in exploration
+   - **Collaborative-based** shows strongest performance across most metrics:
+     - Best RMSE on Netflix (0.922)
+     - Strong diversity and coverage metrics
+     - Best novelty and unexpectedness scores
+   - **Content-based approaches** excel Recovery metrics
+   - **SVD++** provides consistent but generally lower performance
 
-2. **Dataset Characteristics Matter:**
-   - Datasets with rich item features (Yelp) benefit significantly from content-based approaches
-   - Movie recommendation datasets show stronger accuracy but generally lower diversity
-   
-3. **Algorithm Selection:**
-   - ItemKNN approaches consistently outperform UserKNN for exploration metrics
-   - Traditional CF models show stronger accuracy but weaker diversity
-   - The ideal algorithm depends on whether the recommendation goal prioritizes accuracy or discovery
+2. **Dataset Impact:**
+   - **Yelp** enables better diversity and coverage metrics
+   - **Netflix** works well for accuracy and novelty
+   - **MovieLens** shows balanced performance across metrics
+
+3. **Algorithm Strengths:**
+   - **Collaborative-based**: Best for accuracy (RMSE) and exploration metrics
+   - **Content-based UserKNN**: Strong in relevance (Recovery) but weaker in diversity
+   - **Content-based ItemKNN**: Best coverage and diversity on Yelp
+   - **SVD++**: Consistent RMSE but lower exploration metrics
 
 4. **Areas for Improvement:**
-   - All models fail to generate serendipitous recommendations (0.0 across the board)
-   - Balancing relevance with diversity remains challenging
-   - Consider hybrid approaches that can maintain accuracy while improving exploration metrics
+   - No algorithm achieves serendipity
+   - Trade-off between accuracy and diversity remains challenging
+   - Cold start issues evident in `Recovery` and `Serendipity` metrics
+   - Cold start also affects the `F1-score` in content-based filtering approaches
 
-5. **Trade-offs:**
-   - Clear inverse relationship between accuracy (RMSE/Recovery) and diversity metrics
-   - Systems optimized for prediction accuracy generally underperform in catalog coverage
-   - The "cold start" problem remains evident in many of the evaluation scenarios
+5. **Key Trade-offs:**
+   - Higher accuracy often comes with lower diversity
+   - Better coverage typically means lower precision
+   - Novelty and relevance show inverse relationship
 
 ## Usage
 
