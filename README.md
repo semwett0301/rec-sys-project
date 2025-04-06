@@ -163,3 +163,65 @@ See individual implementation folders for specific usage instructions.
 
 ## Final service
 
+The project includes a web service for testing recommendation models, consisting of a FastAPI backend and React frontend.
+
+### How to Run
+
+0. Address `semen.mokrov@gmail.com` for pretrained models and sampled datasets OR **reproduce it by yourself** (it's **too heavy** to upload it on GitHub)
+   - **models** must be in the folder `models`
+   - **sampled datasets** must be in the folder `eda/dataset_samples`
+
+1. **Start the Backend**
+   ```bash
+   # Navigate to backend directory
+   cd backend
+   
+   # Install dependencies
+   pip install -r requirements.txt
+   
+   # Start the FastAPI server
+   uvicorn main:app --reload
+   ```
+
+2. **Start the Frontend**
+   ```bash
+   # Navigate to frontend directory
+   cd frontend
+   
+   # Install dependencies
+   npm install
+   
+   # Start the development server
+   npm run dev
+   ```
+
+### Service Flow
+
+The Top-N Tester service provides an interactive interface for testing different recommendation models:
+
+![Top-N Tester Interface](./frontend/public/top-n-tester.png)
+
+1. **Input Fields**:
+   - **User ID**: Enter a valid user identifier from the selected dataset
+   - **N**: Specify the number of recommendations to receive (top-N items)
+   - **Model**: Choose the recommendation algorithm (Content-based UserKNN, ItemKNN, SVD++)
+   - **Dataset**: Select the dataset to use (MovieLens, Yelp, Netflix)
+
+2. **Request Process**:
+   - Fill in all required fields
+   - Click the "SUBMIT" button to send the request to the backend
+   - The backend processes the request using the selected model and dataset
+
+3. **Results Display**:
+   - The service returns a list of recommended item IDs
+   - Results are displayed in order of relevance
+   - Each item ID represents a potential recommendation (movie or business depending on dataset)
+
+### Technical Details
+
+- The backend (`/backend`) serves pre-trained models and handles recommendation requests
+- The frontend (`/frontend`) provides a user-friendly interface for testing different configurations
+- Communication happens via REST API endpoints
+- Models are loaded from pickle files containing pre-trained states
+- The service supports cross-origin requests for development
+
