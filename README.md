@@ -177,11 +177,6 @@ Each recommendation system implementation includes:
 
 See individual implementation folders for specific usage instructions.
 
-## Work splitting (in approaches)
-- `SVD++` - common
-- `content-based UserKNN` | `content-based ItemKNN` - Simon
-- `collaborative-based ItemKNN` - Masoud
-
 ## Final service
 
 The project includes a web service for testing recommendation models, consisting of a FastAPI backend and React frontend.
